@@ -61,8 +61,13 @@ def convert_librispeech(librispeech_dir, output_dir, limit=20):
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(os.path.join(output_dir, "audio_16k"), exist_ok=True)
 
-    # Find all transcript files
-    transcript_files = glob.glob(f"{librispeech_dir}/*/*/*/*.txt")
+    # Find all transcript files - LibriSpeech uses .trans.txt
+    transcript_files = glob.glob(f"{librispeech_dir}/**/*.trans.txt", recursive=True)
+
+    if not transcript_files:
+        print(f"No transcript files found in {librispeech_dir}")
+        print("Make sure you've extracted the tar.gz file")
+        return
 
     manifest = []
     transcripts = []
@@ -108,6 +113,7 @@ def convert_librispeech(librispeech_dir, output_dir, limit=20):
                     transcripts.append(f"{wav_name}\t{text}")
 
                     count += 1
+                    print(f"Processed {count}/{limit} samples")
 
     # Write manifest file
     with open(os.path.join(output_dir, "manifest_train.jsonl"), "w") as f:
