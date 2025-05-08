@@ -10,6 +10,8 @@ import soundfile as sf
 import torchaudio
 import torch
 import numpy as np
+import json
+import glob
 from pathlib import Path
 from tqdm import tqdm
 
@@ -49,11 +51,89 @@ def generate_synthetic_audio(text, output_path, duration=2.0, sample_rate=16000)
     return output_path
 
 
+def convert_librispeech(librispeech_dir, output_dir, limit=20):
+    """Convert LibriSpeech data to our format"""
+    import glob
+    from pathlib import Path
+    import os
+    import shutil
+
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(os.path.join(output_dir, "audio_16k"), exist_ok=True)
+
+    # Find all transcript files
+    transcript_files = glob.glob(f"{librispeech_dir}/*/*/*/*.txt")
+
+    manifest = []
+    transcripts = []
+    count = 0
+
+    # Process each transcript file
+    for trans_file in transcript_files:
+        if count >= limit:
+            break
+
+        with open(trans_file, "r") as f:
+            for line in f:
+                if count >= limit:
+                    break
+
+                parts = line.strip().split(" ", 1)
+                if len(parts) != 2:
+                    continue
+
+                file_id, text = parts
+                # Find corresponding flac file
+                flac_path = os.path.join(os.path.dirname(trans_file), f"{file_id}.flac")
+
+                if os.path.exists(flac_path):
+                    # Copy and convert to WAV
+                    wav_name = f"sample_{count+1}.wav"
+                    wav_path = os.path.join(output_dir, "audio_16k", wav_name)
+
+                    # Convert FLAC to WAV with torchaudio
+                    waveform, sample_rate = torchaudio.load(flac_path)
+                    torchaudio.save(wav_path, waveform, sample_rate)
+
+                    # Create manifest entry
+                    manifest.append(
+                        {
+                            "file": f"audio_16k/{wav_name}",
+                            "transcription": text,
+                            "speaker": f"librispeech_{file_id.split('-')[0]}",
+                        }
+                    )
+
+                    # Create transcript entry
+                    transcripts.append(f"{wav_name}\t{text}")
+
+                    count += 1
+
+    # Write manifest file
+    with open(os.path.join(output_dir, "manifest_train.jsonl"), "w") as f:
+        for item in manifest:
+            f.write(json.dumps(item) + "\n")
+
+    # Write transcripts file
+    with open(os.path.join(output_dir, "transcripts.tsv"), "w") as f:
+        for line in transcripts:
+            f.write(line + "\n")
+
+    print(f"Converted {count} LibriSpeech samples to {output_dir}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--output-dir", default="data/raw/toy_lang_dataset/audio_16k")
     ap.add_argument("--generate", action="store_true", help="Generate synthetic audio instead of downloading")
+    ap.add_argument("--librispeech", help="Path to LibriSpeech directory to convert")
+    ap.add_argument("--limit", type=int, default=20, help="Max samples to convert")
     args = ap.parse_args()
+
+    # If LibriSpeech option is used, convert that data
+    if args.librispeech:
+        convert_librispeech(args.librispeech, Path(args.output_dir).parent, args.limit)
+        return
 
     os.makedirs(args.output_dir, exist_ok=True)
 
