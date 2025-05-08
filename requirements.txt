@@ -1,0 +1,21 @@
+# Core ML & HF ecosystem
+torch>=2.2.0          # install with CUDA, e.g. pip install torch --index-url https://download.pytorch.org/whl/cu121
+torchaudio>=2.2.0
+transformers>=4.40.0
+datasets>=2.19.0
+evaluate>=0.4.2
+accelerate>=0.28.0
+
+# Speech & audio
+soundfile>=0.12.1
+jiwer>=3.0.1           # WER metric
+
+# NLP metrics
+sacrebleu>=2.4.2
+
+# Utility
+tqdm>=4.66.2
+# sentencepiece==0.1.99   # Using older version with pre-built wheels
+
+# Alternative to sentencepiece, removed due to compilation issues on macOS
+tokenizers>=0.15.0
