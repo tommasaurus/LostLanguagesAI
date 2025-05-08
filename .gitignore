@@ -1,1 +1,41 @@
-data/raw/librispeech/LibriSpeech/dev-clean
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Distribution / packaging
+*.egg-info/
+dist/
+build/
+
+# Large data files
+*.tar.gz
+*.flac
+data/raw/librispeech/LibriSpeech/
+data/raw/librispeech/*.tar.gz
+
+# Model checkpoints and large artifacts
+models/*/checkpoint-*
+models/*/runs
+*.bin
+*.pt
+*.safetensors
+
+# Editor specific files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+
