@@ -14,25 +14,28 @@ from datasets import load_dataset
 from tqdm import tqdm
 
 
-def convert_voxpopuli(language="cs", output_dir="data/raw/voxpopuli_dataset", limit=20):
+def convert_voxpopuli(language="cs", output_dir="data/raw/voxpopuli_dataset", limit=20, validation_only=True):
     """Convert VoxPopuli data to our format"""
     print(f"Downloading VoxPopuli {language} dataset...")
-    ds = load_dataset("facebook/voxpopuli", language)
 
-    print(f"Dataset loaded with {len(ds['train'])} training examples")
+    # Use validation split to avoid downloading the full training set
+    split = "validation" if validation_only else "train"
+    ds = load_dataset("facebook/voxpopuli", language, split=split, trust_remote_code=True)
+
+    print(f"Dataset loaded with {len(ds)} examples from {split} split")
 
     # Create output directories
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(os.path.join(output_dir, "audio_16k"), exist_ok=True)
 
     # Select a subset of examples if limit is specified
-    if limit > 0 and len(ds["train"]) > limit:
+    if limit > 0 and len(ds) > limit:
         # Select examples with different speakers for diversity
-        speaker_ids = list(set(ds["train"]["speaker_id"]))
+        speaker_ids = list(set(ds["speaker_id"]))
         selected_examples = []
 
         for speaker in speaker_ids[: min(limit, len(speaker_ids))]:
-            examples = [i for i, ex in enumerate(ds["train"]) if ex["speaker_id"] == speaker]
+            examples = [i for i, ex in enumerate(ds) if ex["speaker_id"] == speaker]
             if examples:
                 selected_examples.append(examples[0])
                 if len(selected_examples) >= limit:
@@ -41,13 +44,13 @@ def convert_voxpopuli(language="cs", output_dir="data/raw/voxpopuli_dataset", li
         # If we don't have enough different speakers, add more examples
         if len(selected_examples) < limit:
             remaining = limit - len(selected_examples)
-            available = [i for i in range(len(ds["train"])) if i not in selected_examples]
+            available = [i for i in range(len(ds)) if i not in selected_examples]
             if available:
                 selected_examples.extend(available[:remaining])
 
-        examples = ds["train"].select(selected_examples)
+        examples = ds.select(selected_examples)
     else:
-        examples = ds["train"].select(range(min(limit, len(ds["train"]))))
+        examples = ds.select(range(min(limit, len(ds))))
 
     manifest = []
     transcripts = []
@@ -114,9 +117,10 @@ def main():
     parser.add_argument("--language", default="cs", help="Language code to download (e.g., cs, de, fr)")
     parser.add_argument("--output-dir", default="data/raw/voxpopuli_dataset")
     parser.add_argument("--limit", type=int, default=20, help="Max samples to convert")
+    parser.add_argument("--validation-only", action="store_true", help="Use validation split only (smaller download)")
     args = parser.parse_args()
 
-    convert_voxpopuli(args.language, args.output_dir, args.limit)
+    convert_voxpopuli(args.language, args.output_dir, args.limit, args.validation_only)
 
 
 if __name__ == "__main__":
