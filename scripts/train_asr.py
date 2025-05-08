@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Fine‑tunes wav2vec 2.0 on a JSONL manifest, logs WER,
+Fine‑tunes wav2vec 2.0 on a JSONL manifest, logs WER,
 and saves processor + model.
 """
 import argparse, json, os, torch
@@ -10,13 +10,23 @@ from jiwer import wer
 
 
 def jsonl_dataset(path, root, sr=16_000):
+    # Load the JSON file
     ds = load_dataset("json", data_files={"train": path})["train"]
-    ds = ds.cast_column(
-        "file",
-        Audio(
-            sampling_rate=sr, decode=True, stored_as_path=True, download_config=None, base_path=os.path.dirname(root)
-        ),
-    )
+
+    # Create a function to convert file paths to absolute paths
+    def get_abs_path(example):
+        rel_path = example["file"]
+        abs_path = os.path.join(os.path.dirname(root), rel_path)
+        example["file"] = abs_path
+        return example
+
+    # Apply the function to make paths absolute
+    ds = ds.map(get_abs_path)
+
+    # Cast the file column to Audio
+    ds = ds.cast_column("file", Audio(sampling_rate=sr))
+
+    # Split into train/test
     ds = ds.train_test_split(test_size=0.1, seed=42)
     return ds
 

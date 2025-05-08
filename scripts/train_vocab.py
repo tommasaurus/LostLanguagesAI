@@ -36,6 +36,7 @@ def main():
         num_train_epochs=args.epochs,
         evaluation_strategy="epoch",
         save_total_limit=1,
+        push_to_hub=False,
     )
 
     trainer = Trainer(
